@@ -1,27 +1,18 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinAndroidKsp)
-    alias(libs.plugins.kotlin.compose)
-//    alias(libs.plugins.room)
 }
 
 android {
-    namespace = "com.valify"
+    namespace = "com.valify.sdk"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.valify"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -33,10 +24,6 @@ android {
             )
         }
     }
-    ksp {
-        arg("room.schemaLocation", "$projectDir/schemas")
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -50,17 +37,9 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
 }
 
 dependencies {
-    // Valify SDK
-    implementation(libs.vidvocrsdk.v319)
-
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -84,41 +63,24 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     // Room
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
-//    annotationProcessor(libs.room.compiler)
-
-
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // Dagger Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
 
-    implementation(libs.androidx.hilt.navigation.compose)
-
-    // Accompanist
-    implementation(libs.accompanist.permissions)
-    implementation(libs.accompanist.systemuicontroller)
-
-    // Network
-    implementation(libs.retrofit)
-    implementation(libs.com.squareup.retrofit2.converter.gson3)
-    implementation(libs.okhttp)
-    implementation(libs.logging.interceptor)
-
     // CameraX
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.extensions)
 
-    // ML Kit
+    // ML Kit for smile detection
     implementation(libs.mlkit.face.detection)
 
     // Testing
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
 }

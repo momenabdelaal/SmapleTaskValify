@@ -1,4 +1,4 @@
-package com.valify.ui.theme
+package com.valify.presentation.ui.theme
 
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.lightColors

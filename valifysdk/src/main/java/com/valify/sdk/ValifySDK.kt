@@ -7,10 +7,7 @@ import com.valify.sdk.di.ValifyComponent
 import com.valify.sdk.domain.model.RegistrationResult
 import com.valify.sdk.presentation.registration.RegistrationActivity
 
-/**
- * Main entry point for the Valify SDK.
- * This class handles initialization and provides methods to start the registration process.
- */
+
 class ValifySDK private constructor(
     private val context: Context,
     private val component: ValifyComponent
@@ -19,10 +16,7 @@ class ValifySDK private constructor(
         @Volatile
         private var instance: ValifySDK? = null
 
-        /**
-         * Initialize the SDK with the application context.
-         * This should be called before using any SDK features.
-         */
+
         fun initialize(context: Context) {
             if (instance == null) {
                 synchronized(this) {
@@ -41,11 +35,7 @@ class ValifySDK private constructor(
         }
     }
 
-    /**
-     * Start the registration process.
-     * @param activity The activity from which to start the registration
-     * @param callback Callback to receive registration result
-     */
+
     fun startRegistration(
         activity: ComponentActivity,
         callback: (RegistrationResult) -> Unit
@@ -53,9 +43,6 @@ class ValifySDK private constructor(
         RegistrationActivity.start(activity, callback)
     }
 
-    /**
-     * Get the Dagger component for dependency injection.
-     * This is internal and should not be exposed to SDK users.
-     */
+
     internal fun getComponent(): ValifyComponent = component
 }

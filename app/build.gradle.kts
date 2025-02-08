@@ -115,6 +115,9 @@ dependencies {
     // ML Kit
     implementation(libs.mlkit.face.detection)
 
+    // Coil
+    implementation(libs.coil.compose)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

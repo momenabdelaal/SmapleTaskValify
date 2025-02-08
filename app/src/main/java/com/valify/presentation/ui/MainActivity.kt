@@ -1,4 +1,4 @@
-package com.valify
+package com.valify.presentation.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.valify.data.ValifySDKWrapper
 import com.valify.presentation.registration.RegistrationScreen
-import com.valify.ui.theme.ValifyTheme
+import com.valify.presentation.selfie.SelfieScreen
+import com.valify.presentation.ui.theme.ValifyTheme
 import dagger.hilt.android.AndroidEntryPoint
 import me.vidv.vidvocrsdk.sdk.VIDVOCRListener
 import me.vidv.vidvocrsdk.sdk.VIDVOCRResponse
@@ -28,30 +31,8 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var valifySDK: ValifySDKWrapper
 
-    private val sdkListener = object : VIDVOCRListener {
-        fun onSuccess(sessionId: String?, documentData: String?) {
-            Log.d("ValifySDK", "Success - SessionId: $sessionId, Data: $documentData")
-            // Handle successful verification
-            // Navigate back to registration screen or next step
-        }
-
-        fun onError(sessionId: String?, errorCode: Int, errorMessage: String?) {
-            Log.e("ValifySDK", "Error - SessionId: $sessionId, Code: $errorCode, Message: $errorMessage")
-            // Handle verification error
-            // Show error message to user
-        }
-
-        fun onCanceled(sessionId: String?) {
-            Log.d("ValifySDK", "Canceled - SessionId: $sessionId")
-            // Handle user cancellation
-            // Return to previous screen
-        }
-
-        override fun onOCRResult(response: VIDVOCRResponse?) {
-            Log.d("ValifySDK", "Success , Data: $response")
-
-        }
-    }
+    private val sdkListener =
+        VIDVOCRListener { response -> Log.d("ValifySDK", "Success , Data: $response") }
 
     private lateinit var cameraLauncher: ActivityResultLauncher<Intent>
 
@@ -78,6 +59,20 @@ class MainActivity : ComponentActivity() {
                         composable("registration") {
                             RegistrationScreen(
                                 onRegistrationComplete = { registrationId ->
+                                    navController.navigate("selfie/$registrationId")
+                                }
+                            )
+                        }
+                        composable(
+                            route = "selfie/{registrationId}",
+                            arguments = listOf(
+                                navArgument("registrationId") { type = NavType.LongType }
+                            )
+                        ) { backStackEntry ->
+                            val registrationId = backStackEntry.arguments?.getLong("registrationId") ?: return@composable
+                            SelfieScreen(
+                                registrationId = registrationId,
+                                onRegistrationComplete = {
                                     // Start Valify SDK registration process
                                     valifySDK.startRegistration(
                                         activity = this@MainActivity,

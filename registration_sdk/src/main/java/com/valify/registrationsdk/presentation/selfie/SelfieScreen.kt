@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -33,11 +34,14 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
 
+private const val TAG = "SelfieScreen"
+private const val SMILE_THRESHOLD = 0.8f
 
 @OptIn(ExperimentalPermissionsApi::class)
 @RequiresApi(Build.VERSION_CODES.P)
@@ -55,16 +59,16 @@ fun SelfieScreen(
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
-    var imageAnalyzer by remember { mutableStateOf<ImageAnalysis?>(null) }
     val mainExecutor = remember { ContextCompat.getMainExecutor(context) }
     
     val cameraPermissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
 
-    // Initialize face detector
+    // Initialize face detector with optimal settings
     val faceDetector = remember {
         val options = FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+            .setMinFaceSize(0.2f) // Adjust based on your needs
             .build()
         FaceDetection.getClient(options)
     }
@@ -77,7 +81,7 @@ fun SelfieScreen(
         viewModel.eventFlow.collect { event ->
             when (event) {
                 is UiEvent.ShowSnackbar -> {
-                    // Show snackbar with error message if needed
+                    // Show error in UI
                 }
                 is UiEvent.NavigateToRegister -> {
                     onNavigateToRegister(event.registrationId)
@@ -86,13 +90,11 @@ fun SelfieScreen(
         }
     }
 
-
     LaunchedEffect(Unit) {
         if (!cameraPermissionState.status.isGranted) {
             cameraPermissionState.launchPermissionRequest()
         }
     }
-
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.Main) {
@@ -107,18 +109,17 @@ fun SelfieScreen(
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SelfieScreen", "Failed to initialize camera", e)
+                Log.e(TAG, "Failed to initialize camera", e)
             }
         }
     }
-
 
     DisposableEffect(Unit) {
         onDispose {
             try {
                 cameraProvider?.unbindAll()
             } catch (e: Exception) {
-                Log.e("SelfieScreen", "Error cleaning up camera", e)
+                Log.e(TAG, "Error cleaning up camera", e)
             }
         }
     }
@@ -138,7 +139,6 @@ fun SelfieScreen(
                     .fillMaxWidth()
             ) {
                 if (state.savedImage != null) {
-
                     AsyncImage(
                         model = state.savedImage,
                         contentDescription = "Saved Selfie",
@@ -156,32 +156,32 @@ fun SelfieScreen(
                         if (state.isLoading) {
                             CircularProgressIndicator()
                         } else {
-                            // Save button
                             Button(
                                 onClick = { viewModel.onEvent(SelfieEvent.OnSaveAndContinue) },
                                 modifier = Modifier.fillMaxWidth(0.8f),
-                                enabled = state.savedImage != null
+                                enabled = state.savedImage != null && !state.isLoading
                             ) {
                                 Text("Save and Continue")
                             }
                             
-                            // Retake button
                             Button(
                                 onClick = { viewModel.onEvent(SelfieEvent.OnRetakePhoto) },
-                                modifier = Modifier.fillMaxWidth(0.8f)
+                                modifier = Modifier.fillMaxWidth(0.8f),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = MaterialTheme.colors.secondary
+                                )
                             ) {
                                 Text("Retake Photo")
                             }
                         }
                     }
                 } else {
-                    // Camera preview
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
                             PreviewView(ctx).apply {
-                                this.implementationMode = PreviewView.ImplementationMode.PERFORMANCE
-                                this.scaleType = PreviewView.ScaleType.FILL_CENTER
+                                implementationMode = PreviewView.ImplementationMode.PERFORMANCE
+                                scaleType = PreviewView.ScaleType.FILL_CENTER
                                 layoutParams = ViewGroup.LayoutParams(
                                     ViewGroup.LayoutParams.MATCH_PARENT,
                                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -215,13 +215,25 @@ fun SelfieScreen(
                         )
                     }
 
-                    Text(
-                        text = "Smile for the camera!",
+                    Column(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(16.dp),
-                        style = MaterialTheme.typography.h6
-                    )
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Smile for the camera!",
+                            style = MaterialTheme.typography.h6,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Position your face in the center and smile naturally",
+                            style = MaterialTheme.typography.body2,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         }
@@ -242,9 +254,20 @@ private fun PermissionRequest(
         Text(
             "Camera permission is required to take a selfie",
             style = MaterialTheme.typography.h6,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        Button(onClick = onRequestPermission) {
+        Text(
+            "We need camera access to capture your selfie for registration",
+            style = MaterialTheme.typography.body2,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+        Button(
+            onClick = onRequestPermission,
+            modifier = Modifier.fillMaxWidth(0.8f)
+        ) {
             Text("Grant Camera Permission")
         }
     }
@@ -255,91 +278,92 @@ private fun setupCamera(
     executor: Executor,
     cameraProvider: ProcessCameraProvider,
     previewView: PreviewView,
-    faceDetector: com.google.mlkit.vision.face.FaceDetector,
+    faceDetector: FaceDetector,
     onSmileDetected: (Bitmap) -> Unit
 ): ImageCapture {
-
     cameraProvider.unbindAll()
 
-
     val preview = Preview.Builder()
-        .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+        .setTargetAspectRatio(AspectRatio.RATIO_4_3)
         .build()
         .also {
             it.setSurfaceProvider(previewView.surfaceProvider)
         }
 
-
     val imageCapture = ImageCapture.Builder()
         .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-        .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+        .setTargetAspectRatio(AspectRatio.RATIO_4_3)
         .build()
 
-
     val imageAnalysis = ImageAnalysis.Builder()
-        .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+        .setTargetAspectRatio(AspectRatio.RATIO_4_3)
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         .build()
 
+    var isCapturing = false
 
     imageAnalysis.setAnalyzer(executor) { imageProxy ->
         val mediaImage = imageProxy.image
-        if (mediaImage != null) {
+        if (mediaImage != null && !isCapturing) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
             
             faceDetector.process(image)
                 .addOnSuccessListener { faces ->
                     faces.firstOrNull()?.let { face ->
-                        if (face.smilingProbability != null && face.smilingProbability!! > 0.8) {
-
-                            imageProxy.close()
-                            imageCapture.takePicture(executor, object : ImageCapture.OnImageCapturedCallback() {
-                                override fun onCaptureSuccess(image: ImageProxy) {
-                                    try {
-                                        val bitmap = image.toBitmap()
-                                        val matrix = Matrix()
-                                        
-
-                                        matrix.postRotate(
-                                            when (image.imageInfo.rotationDegrees) {
-                                                90 -> 90f
-                                                270 -> 270f
-                                                180 -> 180f
-                                                else -> 0f
-                                            }
-                                        )
-                                        
-
-                                        matrix.postScale(-1f, 1f)
-                                        
-
-                                        val rotatedBitmap = Bitmap.createBitmap(
-                                            bitmap,
-                                            0,
-                                            0,
-                                            bitmap.width,
-                                            bitmap.height,
-                                            matrix,
-                                            true
-                                        )
-                                        
-                                        onSmileDetected(rotatedBitmap)
-                                    } finally {
-                                        image.close()
+                        if (face.smilingProbability != null && face.smilingProbability!! > SMILE_THRESHOLD) {
+                            if (!isCapturing) {
+                                isCapturing = true
+                                imageProxy.close()
+                                imageCapture.takePicture(executor, object : ImageCapture.OnImageCapturedCallback() {
+                                    override fun onCaptureSuccess(image: ImageProxy) {
+                                        try {
+                                            val bitmap = image.toBitmap()
+                                            val matrix = Matrix()
+                                            
+                                            matrix.postRotate(
+                                                when (image.imageInfo.rotationDegrees) {
+                                                    90 -> 90f
+                                                    270 -> 270f
+                                                    180 -> 180f
+                                                    else -> 0f
+                                                }
+                                            )
+                                            
+                                            matrix.postScale(-1f, 1f)
+                                            
+                                            val rotatedBitmap = Bitmap.createBitmap(
+                                                bitmap,
+                                                0,
+                                                0,
+                                                bitmap.width,
+                                                bitmap.height,
+                                                matrix,
+                                                true
+                                            )
+                                            
+                                            onSmileDetected(rotatedBitmap)
+                                            isCapturing = false
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "Error processing captured image", e)
+                                            isCapturing = false
+                                        } finally {
+                                            image.close()
+                                        }
                                     }
-                                }
 
-                                override fun onError(exception: ImageCaptureException) {
-                                    Log.e("SelfieScreen", "Failed to capture image", exception)
-                                }
-                            })
-                            return@addOnSuccessListener
+                                    override fun onError(exception: ImageCaptureException) {
+                                        Log.e(TAG, "Failed to capture image", exception)
+                                        isCapturing = false
+                                    }
+                                })
+                                return@addOnSuccessListener
+                            }
                         }
                     }
                     imageProxy.close()
                 }
                 .addOnFailureListener { e ->
-                    Log.e("SelfieScreen", "Face detection failed", e)
+                    Log.e(TAG, "Face detection failed", e)
                     imageProxy.close()
                 }
         } else {
@@ -348,7 +372,6 @@ private fun setupCamera(
     }
 
     try {
-
         val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
         cameraProvider.bindToLifecycle(
@@ -359,7 +382,7 @@ private fun setupCamera(
             imageAnalysis
         )
     } catch (e: Exception) {
-        Log.e("SelfieScreen", "Use case binding failed", e)
+        Log.e(TAG, "Use case binding failed", e)
     }
 
     return imageCapture

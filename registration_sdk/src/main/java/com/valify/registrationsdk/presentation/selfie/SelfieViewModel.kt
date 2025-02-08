@@ -1,155 +1,156 @@
 package com.valify.registrationsdk.presentation.selfie
 
-import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.face.FaceDetection
-import com.google.mlkit.vision.face.FaceDetectorOptions
-import com.valify.registrationsdk.domain.use_case.CaptureSelfie
+import com.valify.registrationsdk.domain.repository.SelfieRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
-import java.io.File
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
-
-data class SelfieState(
-    val registrationId: Long = 0L,
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val registrationComplete: Boolean = false,
-    val capturedImageUri: Uri? = null
-)
 
 @HiltViewModel
 class SelfieViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val captureSelfie: CaptureSelfie,
-    savedStateHandle: SavedStateHandle
+    private val selfieRepository: SelfieRepository,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val registrationId: Long = checkNotNull(savedStateHandle.get<Long>("registrationId"))
-    private val _state = mutableStateOf(SelfieState(registrationId = registrationId))
+    private val _state = mutableStateOf(SelfieState())
     val state: State<SelfieState> = _state
 
-    private val faceDetector = FaceDetection.getClient(
-        FaceDetectorOptions.Builder()
-            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
-            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
-            .setMinFaceSize(0.15f)
-            .build()
-    )
+    private val _eventFlow = MutableSharedFlow<UiEvent>()
+    val eventFlow = _eventFlow.asSharedFlow()
 
-    @RequiresApi(Build.VERSION_CODES.P)
-    fun capturePhoto(imageCapture: ImageCapture) {
-        _state.value = state.value.copy(isLoading = true, error = null)
-        
-        viewModelScope.launch(Dispatchers.Main + CoroutineExceptionHandler { _, throwable ->
-            _state.value = state.value.copy(
+    private var currentRegistrationId: Long = 0L
+        set(value) {
+            if (field != value) {
+                field = value
+                savedStateHandle["registration_id"] = value
+                loadSavedImage()
+            }
+        }
+
+    init {
+        // Restore registration ID if it exists
+        savedStateHandle.get<Long>("registration_id")?.let { id ->
+            currentRegistrationId = id
+            loadSavedImage()
+        }
+    }
+
+    fun setRegistrationId(id: Long) {
+        if (id != currentRegistrationId) {
+            currentRegistrationId = id
+            // Clear previous state when registration ID changes
+            _state.value = _state.value.copy(
+                savedImage = null,
+                isCaptureSuccess = false,
+                error = null,
                 isLoading = false,
-                error = "Failed to process photo: ${throwable.message}"
+                isSaved = false
             )
-        }) {
-            try {
-                val photoFile = File(context.filesDir, "selfie_${System.currentTimeMillis()}.jpg")
-                takePhoto(imageCapture, photoFile)
-                
-                val image = InputImage.fromFilePath(context, Uri.fromFile(photoFile))
-                val faces = detectFaces(image)
+            loadSavedImage()
+        }
+    }
 
-                if (faces.isEmpty()) {
-                    _state.value = state.value.copy(
-                        isLoading = false,
-                        error = "No face detected. Please look at the camera and try again."
-                    )
-                    photoFile.delete()
-                    return@launch
+    fun onEvent(event: SelfieEvent) {
+        when (event) {
+            is SelfieEvent.OnPhotoCapture -> {
+                viewModelScope.launch {
+                    _state.value = _state.value.copy(isLoading = true)
+                    // First delete any existing selfie for this registration
+                    selfieRepository.deleteSelfie(currentRegistrationId)
+                    
+                    // Then save the new selfie
+                    selfieRepository.saveSelfie(currentRegistrationId, event.bitmap)
+                        .onSuccess { uri ->
+                            _state.value = _state.value.copy(
+                                savedImage = uri,
+                                isCaptureSuccess = true,
+                                error = null,
+                                isLoading = false
+                            )
+                        }
+                        .onFailure { e ->
+                            _state.value = _state.value.copy(
+                                error = "Failed to save photo: ${e.message}",
+                                isLoading = false
+                            )
+                        }
                 }
-
-                val face = faces.first()
-                val smileProb = face.smilingProbability ?: 0f
-
-                if (smileProb < 0.5f) {
-                    _state.value = state.value.copy(
-                        isLoading = false,
-                        error = "Please smile and try again!"
-                    )
-                    photoFile.delete()
-                    return@launch
+            }
+            is SelfieEvent.OnRetakePhoto -> {
+                viewModelScope.launch {
+                    _state.value = _state.value.copy(isLoading = true)
+                    selfieRepository.deleteSelfie(currentRegistrationId)
+                        .onSuccess {
+                            _state.value = _state.value.copy(
+                                savedImage = null,
+                                isCaptureSuccess = false,
+                                error = null,
+                                isLoading = false
+                            )
+                        }
+                        .onFailure { e ->
+                            _state.value = _state.value.copy(
+                                error = "Failed to delete photo: ${e.message}",
+                                isLoading = false
+                            )
+                        }
                 }
-
-                withContext(Dispatchers.IO) {
-                    captureSelfie(registrationId, photoFile.absolutePath)
-                }
-                
-                _state.value = state.value.copy(
-                    isLoading = false,
-                    registrationComplete = true,
-                    error = null,
-                    capturedImageUri = Uri.fromFile(photoFile)
-                )
-            } catch (e: Exception) {
-                _state.value = state.value.copy(
-                    isLoading = false,
-                    error = when (e) {
-                        is ImageCaptureException -> "Failed to capture photo: Camera may be in use"
-                        is SecurityException -> "Permission denied to access camera or storage"
-                        else -> "Failed to process photo: ${e.message}"
+            }
+            is SelfieEvent.OnSaveAndContinue -> {
+                viewModelScope.launch {
+                    _state.value = _state.value.copy(isLoading = true)
+                    if (state.value.savedImage != null) {
+                        // Ensure the image is saved and linked to registration
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            isSaved = true
+                        )
+                        _eventFlow.emit(UiEvent.NavigateToRegister(currentRegistrationId))
+                    } else {
+                        _state.value = _state.value.copy(
+                            error = "Please take a photo first",
+                            isLoading = false
+                        )
                     }
-                )
+                }
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.P)
-    private suspend fun takePhoto(imageCapture: ImageCapture, file: File) = suspendCoroutine { continuation ->
-        try {
-            imageCapture.takePicture(
-                ImageCapture.OutputFileOptions.Builder(file).build(),
-                context.mainExecutor,
-                object : ImageCapture.OnImageSavedCallback {
-                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                        continuation.resume(Unit)
-                    }
+    private fun loadSavedImage() {
+        if (currentRegistrationId == 0L) return
 
-                    override fun onError(exception: ImageCaptureException) {
-                        continuation.resumeWithException(exception)
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
+            selfieRepository.getSelfie(currentRegistrationId)
+                .onSuccess { uri ->
+                    _state.value = _state.value.copy(
+                        savedImage = uri,
+                        isCaptureSuccess = true,
+                        error = null,
+                        isLoading = false
+                    )
+                }
+                .onFailure { e ->
+                    if (e.message != "Selfie not found") {
+                        _state.value = _state.value.copy(
+                            error = "Failed to load saved photo: ${e.message}",
+                            isLoading = false
+                        )
+                    } else {
+                        _state.value = _state.value.copy(isLoading = false)
                     }
                 }
-            )
-        } catch (e: Exception) {
-            continuation.resumeWithException(e)
         }
     }
 
-    private suspend fun detectFaces(image: InputImage) = suspendCoroutine<List<com.google.mlkit.vision.face.Face>> { continuation ->
-        try {
-            faceDetector.process(image)
-                .addOnSuccessListener { faces ->
-                    continuation.resume(faces)
-                }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(e)
-                }
-        } catch (e: Exception) {
-            continuation.resumeWithException(e)
-        }
-    }
 
-    override fun onCleared() {
-        super.onCleared()
-        faceDetector.close()
-    }
 }

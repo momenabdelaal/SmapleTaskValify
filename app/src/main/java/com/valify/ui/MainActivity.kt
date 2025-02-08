@@ -3,6 +3,7 @@ package com.valify.ui
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -32,12 +33,29 @@ class MainActivity : ComponentActivity() {
 
     private val sdkListener = object : VIDVOCRListener {
         override fun onOCRResult(response: VIDVOCRResponse?) {
-            Log.d("ValifySDK", "Success , Data: $response")
-
+            response?.let { result ->
+                Log.d("ValifySDK", "Registration completed successfully")
+                Log.d("ValifySDK", "Response data: $result")
+                runOnUiThread {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Registration completed successfully!",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    // You can navigate to a success screen here if needed
+                }
+            } ?: run {
+                Log.e("ValifySDK", "Registration failed - no response received")
+                runOnUiThread {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Registration failed. Please try again.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
-
-
 
     @RequiresApi(Build.VERSION_CODES.P)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,12 +92,28 @@ class MainActivity : ComponentActivity() {
                             val registrationId = backStackEntry.arguments?.getLong("registrationId") ?: return@composable
                             SelfieScreen(
                                 registrationId = registrationId,
-                                onRegistrationComplete = {
-                                    // Start Valify SDK registration process
-                                    valifySDK.startRegistration(
-                                        activity = this@MainActivity,
-                                        listener = sdkListener
-                                    )
+                                onNavigateToRegister = { id ->
+                                    try {
+                                        // Start Valify SDK registration process
+                                        valifySDK.startRegistration(
+                                            activity = this@MainActivity,
+                                            listener = sdkListener
+                                        )
+                                        // Show loading message
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "Starting registration process...",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        finish()
+                                    } catch (e: Exception) {
+                                        Log.e("ValifySDK", "Failed to start registration", e)
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "Failed to start registration: ${e.message}",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
                                 }
                             )
                         }

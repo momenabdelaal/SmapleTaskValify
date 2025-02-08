@@ -6,7 +6,9 @@ import com.valify.registrationsdk.data.ValifySDKWrapper
 import com.valify.registrationsdk.data.local.RegistrationDatabase
 import com.valify.registrationsdk.data.local.dao.UserRegistrationDao
 import com.valify.registrationsdk.data.repository.RegistrationRepositoryImpl
+import com.valify.registrationsdk.data.repository.SelfieRepositoryImpl
 import com.valify.registrationsdk.domain.repository.RegistrationRepository
+import com.valify.registrationsdk.domain.repository.SelfieRepository
 import com.valify.registrationsdk.domain.use_case.SaveRegistration
 import com.valify.registrationsdk.presentation.registration.validation.ValidateEmail
 import com.valify.registrationsdk.presentation.registration.validation.ValidatePassword
@@ -76,5 +78,12 @@ object AppModule {
     @Provides
     fun provideValidatePhoneNumber(): ValidatePhoneNumber {
         return ValidatePhoneNumber()
+    }
+
+    @Provides
+    fun provideSelfieRepository(
+        @ApplicationContext context: Context
+    ): SelfieRepository {
+        return SelfieRepositoryImpl(context)
     }
 }

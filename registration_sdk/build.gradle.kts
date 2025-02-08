@@ -106,8 +106,9 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
 
-    // ML Kit
-    implementation(libs.mlkit.face.detection)
+    // ML Kit for face detection
+    implementation("com.google.mlkit:face-detection:16.1.5")
+    implementation(libs.face.detection.v1615)
 
     // Coil
     implementation(libs.coil.compose)

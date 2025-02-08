@@ -8,6 +8,7 @@ coilCompose = "2.5.0"
 comSquareupRetrofit2ConverterGson2 = "2.9.0"
 coreKtx = "1.15.0"
 espressoCore = "3.6.1"
+faceDetection = "16.1.5"
 hiltAndroid = "2.50"
 hiltAndroidCompiler = "2.50"
 hiltCompiler = "1.2.0"
@@ -50,6 +51,7 @@ androidx-ui = { module = "androidx.compose.ui:ui", version.ref = "uiTooling" }
 androidx-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "uiTooling" }
 androidx-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "uiTooling" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+face-detection-v1615 = { module = "com.google.mlkit:face-detection", version.ref = "faceDetection" }
 vidvocrsdk-v319 = { module = "com.vidv:VIDVOCRSDK", version.ref = "vidvocrsdk" }
 
 # CameraX

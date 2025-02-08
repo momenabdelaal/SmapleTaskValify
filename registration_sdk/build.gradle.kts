@@ -1,27 +1,23 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+
+//    alias(libs.plugins.android.application)
+//    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinAndroidKsp)
     alias(libs.plugins.kotlin.compose)
-//    alias(libs.plugins.room)
 }
 
 android {
-    namespace = "com.valify"
+    namespace = "com.valify.registrationsdk"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.valify"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -58,9 +54,7 @@ android {
 }
 
 dependencies {
-    // Valify SDK
     implementation(libs.vidvocrsdk.v319)
-    implementation(project(":registration_sdk"))
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -123,5 +117,4 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-}
+    debugImplementation(libs.androidx.ui.tooling)}

@@ -9,7 +9,7 @@ comSquareupRetrofit2ConverterGson2 = "2.9.0"
 coreKtx = "1.15.0"
 espressoCore = "3.6.1"
 hiltAndroid = "2.50"
-hiltAndroidCompiler = "2.49"
+hiltAndroidCompiler = "2.50"
 hiltCompiler = "1.2.0"
 hiltNavigationCompose = "1.2.0"
 junit = "1.2.1"
@@ -85,3 +85,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlinAndroidKsp = { id = "com.google.devtools.ksp", version.ref = "kspVersion" }
 hiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "hiltVersion" }
 room = { id = "androidx.room", version.ref = "room" }
+android-library = { id = "com.android.library", version.ref = "agp" }

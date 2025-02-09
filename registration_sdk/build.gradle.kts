@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.material.icons.extended)
 
     // Compose
     implementation(libs.androidx.activity.compose)
@@ -107,8 +108,10 @@ dependencies {
     implementation(libs.androidx.camera.view)
 
     // ML Kit for face detection
-    implementation("com.google.mlkit:face-detection:16.1.5")
+//    implementation("com.google.mlkit:face-detection:16.1.5")
     implementation(libs.face.detection.v1615)
+
+
 
     // Coil
     implementation(libs.coil.compose)

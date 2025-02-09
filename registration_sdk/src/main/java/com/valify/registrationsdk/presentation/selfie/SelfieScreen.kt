@@ -1,6 +1,7 @@
 package com.valify.registrationsdk.presentation.selfie
 
 import android.Manifest
+import android.app.PendingIntent.getActivity
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
@@ -10,6 +11,8 @@ import android.graphics.YuvImage
 import android.os.Build
 import android.util.Log
 import android.view.ViewGroup
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -19,6 +22,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -52,6 +56,8 @@ fun SelfieScreen(
     viewModel: SelfieViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val activity = context as? ComponentActivity
+
     val lifecycleOwner = LocalLifecycleOwner.current
     val state = viewModel.state.value
     val scope = rememberCoroutineScope()
@@ -123,116 +129,159 @@ fun SelfieScreen(
             }
         }
     }
+    BackHandler {
+        activity?.finishAffinity()
+    }
+    Scaffold(
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (!cameraPermissionState.status.isGranted) {
-            PermissionRequest {
-                cameraPermissionState.launchPermissionRequest()
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                if (state.savedImage != null) {
-                    AsyncImage(
-                        model = state.savedImage,
-                        contentDescription = "Saved Selfie",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    
-                    Column(
+        topBar = {
+            TopAppBar(
+                backgroundColor = Color(0xFF263AC2),
+                title = {
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .fillMaxWidth()
+                            .statusBarsPadding(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator()
-                        } else {
-                            Button(
-                                onClick = { viewModel.onEvent(SelfieEvent.OnSaveAndContinue) },
-                                modifier = Modifier.fillMaxWidth(0.8f),
-                                enabled = state.savedImage != null && !state.isLoading
-                            ) {
-                                Text("Save and Continue")
-                            }
-                            
-                            Button(
-                                onClick = { viewModel.onEvent(SelfieEvent.OnRetakePhoto) },
-                                modifier = Modifier.fillMaxWidth(0.8f),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = MaterialTheme.colors.secondary
-                                )
-                            ) {
-                                Text("Retake Photo")
+
+
+//                        Text(
+//                            text = "SelfieScreen",
+//                            style = MaterialTheme.typography.h6,
+//                            color = Color.White,
+//                            textAlign = TextAlign.Center
+//
+//                        )
+                    }
+                },
+            )
+        }) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (!cameraPermissionState.status.isGranted) {
+                PermissionRequest {
+                    cameraPermissionState.launchPermissionRequest()
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    if (state.savedImage != null) {
+                        AsyncImage(
+                            model = state.savedImage,
+                            contentDescription = "Saved Selfie",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (state.isLoading) {
+                                CircularProgressIndicator()
+                            } else {
+                                Button(
+                                    onClick = { viewModel.onEvent(SelfieEvent.OnSaveAndContinue) },
+                                    modifier = Modifier
+                                        .height(50.dp)
+                                        .fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        backgroundColor =  Color(0xFF263AC2) ,
+                                        contentColor = Color.White,
+                                        disabledBackgroundColor = Color(0xFFB0BEC5),
+                                        disabledContentColor = Color.White
+                                    )
+
+                                ) {
+                                    Text("Save and Continue")
+                                }
+
+                                Button(
+                                    onClick = { viewModel.onEvent(SelfieEvent.OnRetakePhoto) },
+                                    modifier = Modifier.fillMaxWidth(0.8f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        backgroundColor =  Color(0xFFB0BEC5) ,
+                                        contentColor = Color.White,
+                                    )
+                                ) {
+                                    Text("Retake Photo")
+                                }
                             }
                         }
-                    }
-                } else {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { ctx ->
-                            PreviewView(ctx).apply {
-                                implementationMode = PreviewView.ImplementationMode.PERFORMANCE
-                                scaleType = PreviewView.ScaleType.FILL_CENTER
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                            }.also { view -> 
-                                previewView = view
-                                cameraProvider?.let { provider ->
-                                    imageCapture = setupCamera(lifecycleOwner, mainExecutor, provider, view, faceDetector) { bitmap ->
-                                        scope.launch {
-                                            viewModel.onEvent(SelfieEvent.OnPhotoCapture(bitmap))
+                    } else {
+                        AndroidView(
+                            modifier = Modifier.fillMaxSize(),
+                            factory = { ctx ->
+                                PreviewView(ctx).apply {
+                                    implementationMode = PreviewView.ImplementationMode.PERFORMANCE
+                                    scaleType = PreviewView.ScaleType.FILL_CENTER
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                }.also { view ->
+                                    previewView = view
+                                    cameraProvider?.let { provider ->
+                                        imageCapture = setupCamera(
+                                            lifecycleOwner,
+                                            mainExecutor,
+                                            provider,
+                                            view,
+                                            faceDetector
+                                        ) { bitmap ->
+                                            scope.launch {
+                                                viewModel.onEvent(SelfieEvent.OnPhotoCapture(bitmap))
+                                            }
                                         }
                                     }
                                 }
                             }
+                        )
+
+                        if (state.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center)
+                            )
                         }
-                    )
 
-                    if (state.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
+                        if (state.error != null) {
+                            Text(
+                                text = state.error,
+                                color = MaterialTheme.colors.error,
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(16.dp)
+                            )
+                        }
 
-                    if (state.error != null) {
-                        Text(
-                            text = state.error,
-                            color = MaterialTheme.colors.error,
+                        Column(
                             modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(16.dp)
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Smile for the camera!",
-                            style = MaterialTheme.typography.h6,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Position your face in the center and smile naturally",
-                            style = MaterialTheme.typography.body2,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
-                        )
+                                .align(Alignment.TopCenter)
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Smile for the camera!",
+                                style = MaterialTheme.typography.h6,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Position your face in the center and smile naturally",
+                                style = MaterialTheme.typography.body2,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }

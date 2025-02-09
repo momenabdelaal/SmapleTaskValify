@@ -36,7 +36,7 @@ class SelfieViewModel @Inject constructor(
         }
 
     init {
-        // Restore registration ID if it exists
+
         savedStateHandle.get<Long>("registration_id")?.let { id ->
             currentRegistrationId = id
             loadSavedImage()
@@ -46,7 +46,6 @@ class SelfieViewModel @Inject constructor(
     fun setRegistrationId(id: Long) {
         if (id != currentRegistrationId) {
             currentRegistrationId = id
-            // Clear previous state when registration ID changes
             _state.value = _state.value.copy(
                 savedImage = null,
                 isCaptureSuccess = false,
@@ -63,10 +62,8 @@ class SelfieViewModel @Inject constructor(
             is SelfieEvent.OnPhotoCapture -> {
                 viewModelScope.launch {
                     _state.value = _state.value.copy(isLoading = true)
-                    // First delete any existing selfie for this registration
                     selfieRepository.deleteSelfie(currentRegistrationId)
                     
-                    // Then save the new selfie
                     selfieRepository.saveSelfie(currentRegistrationId, event.bitmap)
                         .onSuccess { uri ->
                             _state.value = _state.value.copy(
@@ -108,7 +105,6 @@ class SelfieViewModel @Inject constructor(
                 viewModelScope.launch {
                     _state.value = _state.value.copy(isLoading = true)
                     if (state.value.savedImage != null) {
-                        // Ensure the image is saved and linked to registration
                         _state.value = _state.value.copy(
                             isLoading = false,
                             isSaved = true

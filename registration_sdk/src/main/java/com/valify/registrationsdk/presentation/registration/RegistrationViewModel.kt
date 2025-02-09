@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
 @HiltViewModel
 class RegistrationViewModel @Inject constructor(
     private val validateEmail: ValidateEmail,
@@ -32,32 +31,32 @@ class RegistrationViewModel @Inject constructor(
     fun onEvent(event: RegistrationEvent) {
         when (event) {
             is RegistrationEvent.UsernameChanged -> {
+                val error = if (event.username.isBlank()) "Username cannot be blank" else null
                 _state.value = _state.value.copy(
                     username = event.username,
-                    usernameError = if (event.username.isBlank()) "Username cannot be blank" else null
+                    usernameError = error
                 )
-                validateForm()
             }
             is RegistrationEvent.EmailChanged -> {
+                val emailResult = validateEmail(event.email)
                 _state.value = _state.value.copy(
                     email = event.email,
-                    emailError = null
+                    emailError = if (!emailResult.successful) emailResult.errorMessage else null
                 )
-                validateForm()
             }
             is RegistrationEvent.PhoneNumberChanged -> {
+                val phoneResult = validatePhoneNumber(event.phoneNumber)
                 _state.value = _state.value.copy(
                     phoneNumber = event.phoneNumber,
-                    phoneNumberError = null
+                    phoneNumberError = if (!phoneResult.successful) phoneResult.errorMessage else null
                 )
-                validateForm()
             }
             is RegistrationEvent.PasswordChanged -> {
+                val passwordResult = validatePassword(event.password)
                 _state.value = _state.value.copy(
                     password = event.password,
-                    passwordError = null
+                    passwordError = if (!passwordResult.successful) passwordResult.errorMessage else null
                 )
-                validateForm()
             }
             is RegistrationEvent.Submit -> {
                 if (validateForm()) {
@@ -70,21 +69,36 @@ class RegistrationViewModel @Inject constructor(
                 }
             }
         }
+
+        // Update overall form validation status
+        updateFormValidation()
+    }
+
+    private fun updateFormValidation() {
+        _state.value = _state.value.copy(
+            isValid = _state.value.usernameError == null &&
+                    _state.value.emailError == null &&
+                    _state.value.phoneNumberError == null &&
+                    _state.value.passwordError == null &&
+                    _state.value.username.isNotBlank()
+        )
     }
 
     private fun validateForm(): Boolean {
-        val emailResult = validateEmail(state.value.email)
-        val passwordResult = validatePassword(state.value.password)
-        val phoneResult = validatePhoneNumber(state.value.phoneNumber)
-        val usernameValid = state.value.username.isNotBlank()
+        val usernameError = if (_state.value.username.isBlank()) "Username cannot be blank" else null
+        val emailResult = validateEmail(_state.value.email)
+        val passwordResult = validatePassword(_state.value.password)
+        val phoneResult = validatePhoneNumber(_state.value.phoneNumber)
 
         _state.value = _state.value.copy(
+            usernameError = usernameError,
             emailError = if (!emailResult.successful) emailResult.errorMessage else null,
             passwordError = if (!passwordResult.successful) passwordResult.errorMessage else null,
             phoneNumberError = if (!phoneResult.successful) phoneResult.errorMessage else null,
-            usernameError = if (!usernameValid) "Username cannot be blank" else null,
-            isValid = emailResult.successful && passwordResult.successful && 
-                      phoneResult.successful && usernameValid
+            isValid = usernameError == null &&
+                    emailResult.successful &&
+                    passwordResult.successful &&
+                    phoneResult.successful
         )
 
         return _state.value.isValid
@@ -94,19 +108,20 @@ class RegistrationViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _state.value = _state.value.copy(isLoading = true, error = null)
-                
+
                 val registration = UserRegistration(
                     username = state.value.username,
                     email = state.value.email,
                     phoneNumber = state.value.phoneNumber,
                     password = state.value.password
                 )
-                
+
                 val registrationId = saveRegistration(registration)
                 _state.value = _state.value.copy(
                     registrationId = registrationId,
                     isLoading = false
                 )
+
                 // Navigate to CameraActivity after successful registration
                 _eventFlow.emit(UiEvent.NavigateToCamera)
             } catch (e: IllegalArgumentException) {

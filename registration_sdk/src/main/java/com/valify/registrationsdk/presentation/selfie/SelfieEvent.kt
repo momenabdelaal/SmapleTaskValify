@@ -2,7 +2,6 @@ package com.valify.registrationsdk.presentation.selfie
 
 import android.graphics.Bitmap
 
-
 sealed class SelfieEvent {
     data class OnPhotoCapture(val bitmap: Bitmap) : SelfieEvent()
     object OnRetakePhoto : SelfieEvent()

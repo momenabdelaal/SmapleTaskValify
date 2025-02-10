@@ -42,9 +42,7 @@ class RegistrationRepositoryImpl @Inject constructor(
         return dao.isEmailTaken(email)
     }
 
-    /**
-     * Extension function to convert domain model to entity
-     */
+
     private fun UserRegistration.toEntity(): UserRegistrationEntity {
         return UserRegistrationEntity(
             username = username,

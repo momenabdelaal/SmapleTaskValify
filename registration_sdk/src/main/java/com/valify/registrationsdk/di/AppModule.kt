@@ -7,12 +7,11 @@ import com.valify.registrationsdk.data.local.RegistrationDatabase
 import com.valify.registrationsdk.data.local.dao.UserRegistrationDao
 import com.valify.registrationsdk.data.repository.RegistrationRepositoryImpl
 import com.valify.registrationsdk.data.repository.SelfieRepositoryImpl
+import com.valify.registrationsdk.data.validation.DefaultValidationService
 import com.valify.registrationsdk.domain.repository.RegistrationRepository
 import com.valify.registrationsdk.domain.repository.SelfieRepository
 import com.valify.registrationsdk.domain.use_case.SaveRegistration
-import com.valify.registrationsdk.presentation.registration.validation.ValidateEmail
-import com.valify.registrationsdk.presentation.registration.validation.ValidatePassword
-import com.valify.registrationsdk.presentation.registration.validation.ValidatePhoneNumber
+import com.valify.registrationsdk.domain.validation.ValidationService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -59,6 +58,7 @@ object AppModule {
     }
 
     @Provides
+    @Singleton
     fun provideSaveRegistration(
         repository: RegistrationRepository
     ): SaveRegistration {
@@ -66,24 +66,16 @@ object AppModule {
     }
 
     @Provides
-    fun provideValidateEmail(): ValidateEmail {
-        return ValidateEmail()
-    }
-
-    @Provides
-    fun provideValidatePassword(): ValidatePassword {
-        return ValidatePassword()
-    }
-
-    @Provides
-    fun provideValidatePhoneNumber(): ValidatePhoneNumber {
-        return ValidatePhoneNumber()
-    }
-
-    @Provides
+    @Singleton
     fun provideSelfieRepository(
         @ApplicationContext context: Context
     ): SelfieRepository {
         return SelfieRepositoryImpl(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideValidationService(): ValidationService {
+        return DefaultValidationService()
     }
 }

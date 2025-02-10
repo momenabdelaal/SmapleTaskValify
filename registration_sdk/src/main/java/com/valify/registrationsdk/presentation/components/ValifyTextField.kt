@@ -54,9 +54,9 @@ fun ValifyTextField(
                 keyboardType = keyboardType
             ),
             visualTransformation = if (isPassword && !passwordVisible.value) {
-                PasswordVisualTransformation() // ✅ Hide password
+                PasswordVisualTransformation()
             } else {
-                VisualTransformation.None // ✅ Show password
+                VisualTransformation.None
             },
             enabled = isEnabled,
             trailingIcon = {

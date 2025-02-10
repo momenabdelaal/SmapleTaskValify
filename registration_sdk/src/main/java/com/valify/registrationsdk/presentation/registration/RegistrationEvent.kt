@@ -1,5 +1,10 @@
 package com.valify.registrationsdk.presentation.registration
 
+sealed class UiEvent {
+    data class ShowError(val message: String) : UiEvent()
+    data class NavigateToSelfie(val userId: Long) : UiEvent()
+}
+
 sealed class RegistrationEvent {
     data class UsernameChanged(val username: String) : RegistrationEvent()
     data class EmailChanged(val email: String) : RegistrationEvent()

@@ -94,17 +94,15 @@ class MainActivity : ComponentActivity() {
                                 registrationId = registrationId,
                                 onNavigateToRegister = { id ->
                                     try {
-                                        // Start Valify SDK registration process
                                         valifySDK.startRegistration(
                                             activity = this@MainActivity,
                                             listener = sdkListener
                                         )
-                                        // Show loading message
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            "Starting registration process...",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+//                                        Toast.makeText(
+//                                            this@MainActivity,
+//                                            "Starting registration process...",
+//                                            Toast.LENGTH_SHORT
+//                                        ).show()
                                         finish()
                                     } catch (e: Exception) {
                                         Log.e("ValifySDK", "Failed to start registration", e)

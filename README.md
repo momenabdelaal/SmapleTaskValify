@@ -102,4 +102,4 @@ ValifyRegistration.startRegistration(
 
 ## Support
 For issues and questions:
-support@valify.com
+bibomomen@gmail.com

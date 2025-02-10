@@ -1,5 +1,6 @@
 package com.valify.registrationsdk.presentation.registration
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -10,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.valify.registrationsdk.presentation.components.ValifyProgressIndicator
 import com.valify.registrationsdk.presentation.components.ValifyTextField
 import com.valify.registrationsdk.presentation.theme.LocalValifyTheme
@@ -24,14 +26,15 @@ fun RegistrationScreen(
     val theme = LocalValifyTheme.current
     val context = LocalContext.current
     var showError by remember { mutableStateOf<String?>(null) }
+    var showSelfiePreview by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = true) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is RegistrationViewModel.UiEvent.NavigateToSelfie -> {
+                is UiEvent.NavigateToSelfie -> {
                     onRegistrationComplete(event.userId)
                 }
-                is RegistrationViewModel.UiEvent.ShowError -> {
+                is UiEvent.ShowError -> {
                     showError = event.message
                 }
             }
@@ -41,7 +44,7 @@ fun RegistrationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.height(100.dp),
+                modifier = Modifier.height(85.dp),
                 backgroundColor = theme.colors.primary,
                 title = {
                     Box(
@@ -65,64 +68,115 @@ fun RegistrationScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                ValifyTextField(
-                    value = state.username,
-                    onValueChange = { viewModel.onEvent(RegistrationEvent.UsernameChanged(it)) },
-                    label = "Username",
-                    error = state.usernameError,
-                    isEnabled = !state.isLoading
-                )
-
-                ValifyTextField(
-                    value = state.email,
-                    onValueChange = { viewModel.onEvent(RegistrationEvent.EmailChanged(it)) },
-                    label = "Email",
-                    keyboardType = KeyboardType.Email,
-                    error = state.emailError,
-                    isEnabled = !state.isLoading
-                )
-
-                ValifyTextField(
-                    maxLength = 11,
-                    value = state.phoneNumber,
-                    onValueChange = { viewModel.onEvent(RegistrationEvent.PhoneNumberChanged(it)) },
-                    label = "Phone Number",
-                    keyboardType = KeyboardType.Phone,
-                    error = state.phoneNumberError,
-                    isEnabled = !state.isLoading
-                )
-
-                ValifyTextField(
-                    value = state.password,
-                    onValueChange = { viewModel.onEvent(RegistrationEvent.PasswordChanged(it)) },
-                    label = "Password",
-                    keyboardType = KeyboardType.Password,
-                    error = state.passwordError,
-                    isPassword = true,
-                    isEnabled = !state.isLoading
-                )
-
-                Button(
-                    onClick = { viewModel.onEvent(RegistrationEvent.Submit) },
-                    enabled = state.isFormValid && !state.isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor =  Color(0xFF263AC2) ,
-                        contentColor = Color.White,
-                        disabledBackgroundColor = Color(0xFFB0BEC5),
-                        disabledContentColor = Color.White
-                    ),
+            if (showSelfiePreview && state.selfieImagePath != null) {
+                Column(
                     modifier = Modifier
-                        .height(80.dp).fillMaxWidth()
-                        .padding(vertical = 16.dp)
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(text = if (state.isLoading) "Registering..." else "Register")
+                    AsyncImage(
+                        model = state.selfieImagePath,
+                        contentDescription = "Selfie Preview",
+                        modifier = Modifier
+                            .size(300.dp)
+                            .padding(16.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Button(onClick = { showSelfiePreview = false }) {
+                            Text("Back")
+                        }
+                        Button(
+                            onClick = { 
+                                state.registrationId?.let { onRegistrationComplete(it) }
+                            }
+                        ) {
+                            Text("Retake Photo")
+                        }
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    ValifyTextField(
+                        value = state.username,
+                        onValueChange = { viewModel.onEvent(RegistrationEvent.UsernameChanged(it)) },
+                        label = "Username",
+                        error = state.usernameError,
+                        isEnabled = !state.isLoading
+                    )
+
+                    ValifyTextField(
+                        value = state.email,
+                        onValueChange = { viewModel.onEvent(RegistrationEvent.EmailChanged(it)) },
+                        label = "Email",
+                        keyboardType = KeyboardType.Email,
+                        error = state.emailError,
+                        isEnabled = !state.isLoading
+                    )
+
+                    ValifyTextField(
+                        maxLength = 11,
+                        value = state.phoneNumber,
+                        onValueChange = { viewModel.onEvent(RegistrationEvent.PhoneNumberChanged(it)) },
+                        label = "Phone Number",
+                        keyboardType = KeyboardType.Phone,
+                        error = state.phoneNumberError,
+                        isEnabled = !state.isLoading
+                    )
+
+                    ValifyTextField(
+                        value = state.password,
+                        onValueChange = { viewModel.onEvent(RegistrationEvent.PasswordChanged(it)) },
+                        label = "Password",
+                        keyboardType = KeyboardType.Password,
+                        error = state.passwordError,
+                        isPassword = true,
+                        isEnabled = !state.isLoading
+                    )
+
+
+
+                    Button(
+                        onClick = { viewModel.onEvent(RegistrationEvent.Submit) },
+                        enabled = (!state.isRegistered && state.isFormValid && !state.isLoading),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = Color(0xFF263AC2),
+                            contentColor = Color.White,
+                            disabledBackgroundColor = Color(0xFFB0BEC5),
+                            disabledContentColor = Color.White
+                        ),
+                        modifier = Modifier
+                            .height(80.dp)
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp)
+                    ) {
+                        Text(text = if (state.isLoading) "Registering..." else "Register")
+                    }
+
+                    if (state.isRegistered) {
+                        Text(
+                            text = "Already Registered",
+                            color = Color(0xFF263AC2),
+                            modifier = Modifier
+                                .clickable {
+                                    if (state.selfieImagePath != null) {
+                                        showSelfiePreview = true
+                                    } else {
+                                        state.registrationId?.let { onRegistrationComplete(it) }
+                                    }
+                                }
+                                .padding(8.dp)
+                        )
+                    }
                 }
             }
 

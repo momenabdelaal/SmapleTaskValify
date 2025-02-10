@@ -40,6 +40,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.valify.registrationsdk.util.ImageUtils
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
@@ -207,7 +208,7 @@ fun SelfieScreen(
 
                                 Button(
                                     onClick = { viewModel.onEvent(SelfieEvent.OnRetakePhoto) },
-                                    modifier = Modifier.fillMaxWidth(0.8f),
+                                    modifier = Modifier.fillMaxWidth(0.8f).height(50.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         backgroundColor =  Color(0xFFB0BEC5) ,
                                         contentColor = Color.White,
@@ -367,30 +368,25 @@ private fun setupCamera(
                                     override fun onCaptureSuccess(image: ImageProxy) {
                                         try {
                                             val bitmap = image.toBitmap()
-                                            val matrix = Matrix()
-                                            
-                                            matrix.postRotate(
-                                                when (image.imageInfo.rotationDegrees) {
+                                            val rotatedBitmap = ImageUtils.transformBitmap(
+                                                bitmap = bitmap,
+                                                rotation = when (image.imageInfo.rotationDegrees) {
                                                     90 -> 90f
                                                     270 -> 270f
                                                     180 -> 180f
                                                     else -> 0f
-                                                }
+                                                },
+                                                flipHorizontal = true
                                             )
                                             
-                                            matrix.postScale(-1f, 1f)
+                                            val compressedImage = ImageUtils.compressAndOptimize(rotatedBitmap)
+                                            val finalBitmap = BitmapFactory.decodeByteArray(compressedImage, 0, compressedImage.size)
                                             
-                                            val rotatedBitmap = Bitmap.createBitmap(
-                                                bitmap,
-                                                0,
-                                                0,
-                                                bitmap.width,
-                                                bitmap.height,
-                                                matrix,
-                                                true
-                                            )
+                                            onSmileDetected(finalBitmap)
                                             
-                                            onSmileDetected(rotatedBitmap)
+                                            // Cleanup
+                                            ImageUtils.recycleBitmap(bitmap)
+                                            ImageUtils.recycleBitmap(rotatedBitmap)
                                             isCapturing = false
                                         } catch (e: Exception) {
                                             Log.e(TAG, "Error processing captured image", e)

@@ -5,21 +5,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.valify.registrationsdk.domain.model.UserRegistration
+import com.valify.registrationsdk.domain.use_case.GetRegistration
 import com.valify.registrationsdk.domain.use_case.SaveRegistration
-import com.valify.registrationsdk.presentation.registration.validation.ValidateEmail
-import com.valify.registrationsdk.presentation.registration.validation.ValidatePassword
-import com.valify.registrationsdk.presentation.registration.validation.ValidatePhoneNumber
+import com.valify.registrationsdk.domain.validation.ValidationResult
+import com.valify.registrationsdk.domain.validation.ValidationService
+import com.valify.registrationsdk.util.DeviceUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
 @HiltViewModel
 class RegistrationViewModel @Inject constructor(
-    private val validateEmail: ValidateEmail,
-    private val validatePassword: ValidatePassword,
-    private val validatePhoneNumber: ValidatePhoneNumber,
-    private val saveRegistration: SaveRegistration
+    private val saveRegistration: SaveRegistration,
+    private val getRegistration: GetRegistration,
+    private val validationService: ValidationService,
+    private val deviceUtils: DeviceUtils
 ) : ViewModel() {
 
     private val _state = mutableStateOf(RegistrationState())
@@ -28,118 +30,128 @@ class RegistrationViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<UiEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
+    init {
+        viewModelScope.launch {
+            val deviceId = deviceUtils.getDeviceId()
+            _state.value = _state.value.copy(deviceId = deviceId)
+            
+            getRegistration().collect { registration ->
+                registration?.let {
+                    _state.value = _state.value.copy(
+                        isRegistered = true,
+                        registrationId = it.id,
+                        selfieImagePath = it.selfieImagePath
+                    )
+                }
+            }
+        }
+    }
+
     fun onEvent(event: RegistrationEvent) {
         when (event) {
             is RegistrationEvent.UsernameChanged -> {
-                val error = if (event.username.isBlank()) "Username cannot be blank" else null
-                _state.value = _state.value.copy(
-                    username = event.username,
-                    usernameError = error
-                )
+                when (val result = validationService.validateUsername(event.username)) {
+                    is ValidationResult.Success -> {
+                        _state.value = _state.value.copy(
+                            username = event.username,
+                            usernameError = null
+                        )
+                    }
+                    is ValidationResult.Error -> {
+                        _state.value = _state.value.copy(
+                            username = event.username,
+                            usernameError = result.message
+                        )
+                    }
+                }
+                updateFormValidity()
             }
             is RegistrationEvent.EmailChanged -> {
-                val emailResult = validateEmail(event.email)
-                _state.value = _state.value.copy(
-                    email = event.email,
-                    emailError = if (!emailResult.successful) emailResult.errorMessage else null
-                )
+                when (val result = validationService.validateEmail(event.email)) {
+                    is ValidationResult.Success -> {
+                        _state.value = _state.value.copy(
+                            email = event.email,
+                            emailError = null
+                        )
+                    }
+                    is ValidationResult.Error -> {
+                        _state.value = _state.value.copy(
+                            email = event.email,
+                            emailError = result.message
+                        )
+                    }
+                }
+                updateFormValidity()
             }
             is RegistrationEvent.PhoneNumberChanged -> {
-                val phoneResult = validatePhoneNumber(event.phoneNumber)
-                _state.value = _state.value.copy(
-                    phoneNumber = event.phoneNumber,
-                    phoneNumberError = if (!phoneResult.successful) phoneResult.errorMessage else null
-                )
+                when (val result = validationService.validatePhone(event.phoneNumber)) {
+                    is ValidationResult.Success -> {
+                        _state.value = _state.value.copy(
+                            phoneNumber = event.phoneNumber,
+                            phoneNumberError = null
+                        )
+                    }
+                    is ValidationResult.Error -> {
+                        _state.value = _state.value.copy(
+                            phoneNumber = event.phoneNumber,
+                            phoneNumberError = result.message
+                        )
+                    }
+                }
+                updateFormValidity()
             }
             is RegistrationEvent.PasswordChanged -> {
-                val passwordResult = validatePassword(event.password)
-                _state.value = _state.value.copy(
-                    password = event.password,
-                    passwordError = if (!passwordResult.successful) passwordResult.errorMessage else null
-                )
+                when (val result = validationService.validatePassword(event.password)) {
+                    is ValidationResult.Success -> {
+                        _state.value = _state.value.copy(
+                            password = event.password,
+                            passwordError = null
+                        )
+                    }
+                    is ValidationResult.Error -> {
+                        _state.value = _state.value.copy(
+                            password = event.password,
+                            passwordError = result.message
+                        )
+                    }
+                }
+                updateFormValidity()
             }
             is RegistrationEvent.Submit -> {
-                if (validateForm()) {
-                    submitData()
-                }
-            }
-            is RegistrationEvent.NavigateToSelfie -> {
-                viewModelScope.launch {
-                    _eventFlow.emit(UiEvent.NavigateToSelfie(_state.value.registrationId!!))
-                }
+                register()
             }
         }
-
-        // Update overall form validation status
-        updateFormValidation()
     }
 
-    private fun updateFormValidation() {
-        _state.value = _state.value.copy(
-            isValid = _state.value.usernameError == null &&
-                    _state.value.emailError == null &&
-                    _state.value.phoneNumberError == null &&
-                    _state.value.passwordError == null &&
-                    _state.value.username.isNotBlank()
-        )
+    private fun updateFormValidity() {
+        val isValid = with(_state.value) {
+            username.isNotBlank() && email.isNotBlank() && 
+            phoneNumber.isNotBlank() && password.isNotBlank() &&
+            usernameError == null && emailError == null && 
+            phoneNumberError == null && passwordError == null
+        }
+        _state.value = _state.value.copy(isFormValid = isValid)
     }
 
-    private fun validateForm(): Boolean {
-        val usernameError = if (_state.value.username.isBlank()) "Username cannot be blank" else null
-        val emailResult = validateEmail(_state.value.email)
-        val passwordResult = validatePassword(_state.value.password)
-        val phoneResult = validatePhoneNumber(_state.value.phoneNumber)
-
-        _state.value = _state.value.copy(
-            usernameError = usernameError,
-            emailError = if (!emailResult.successful) emailResult.errorMessage else null,
-            passwordError = if (!passwordResult.successful) passwordResult.errorMessage else null,
-            phoneNumberError = if (!phoneResult.successful) phoneResult.errorMessage else null,
-            isValid = usernameError == null &&
-                    emailResult.successful &&
-                    passwordResult.successful &&
-                    phoneResult.successful
-        )
-
-        return _state.value.isValid
-    }
-
-    private fun submitData() {
+    private fun register() {
         viewModelScope.launch {
             try {
-                _state.value = _state.value.copy(isLoading = true, error = null)
-
-                val registration = UserRegistration(
-                    username = state.value.username,
-                    email = state.value.email,
-                    phoneNumber = state.value.phoneNumber,
-                    password = state.value.password
+                _state.value = _state.value.copy(isLoading = true)
+                val registrationId = saveRegistration(
+                    UserRegistration(
+                        username = _state.value.username,
+                        email = _state.value.email,
+                        phone = _state.value.phoneNumber,
+                        password = _state.value.password,
+                        deviceId = _state.value.deviceId
+                    )
                 )
-
-                val registrationId = saveRegistration(registration)
-                _state.value = _state.value.copy(
-                    registrationId = registrationId,
-                    isLoading = false
-                )
-
-                // Navigate to CameraActivity after successful registration
-                _eventFlow.emit(UiEvent.NavigateToCamera)
-            } catch (e: IllegalArgumentException) {
-                _state.value = _state.value.copy(
-                    error = e.message,
-                    isLoading = false
-                )
+                _eventFlow.emit(UiEvent.NavigateToSelfie(registrationId))
             } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    error = e.message ?: "An unexpected error occurred",
-                    isLoading = false
-                )
+                _eventFlow.emit(UiEvent.ShowError(e.message ?: "An unexpected error occurred"))
+            } finally {
+                _state.value = _state.value.copy(isLoading = false)
             }
         }
-    }
-
-    sealed class UiEvent {
-        data class NavigateToSelfie(val registrationId: Long) : UiEvent()
-        object NavigateToCamera : UiEvent()
     }
 }

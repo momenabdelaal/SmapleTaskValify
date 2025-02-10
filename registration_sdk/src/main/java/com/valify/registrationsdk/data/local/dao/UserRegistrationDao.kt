@@ -20,4 +20,10 @@ interface UserRegistrationDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM user_registrations WHERE email = :email)")
     suspend fun isEmailTaken(email: String): Boolean
+
+    @Query("SELECT * FROM user_registrations WHERE deviceId = :deviceId")
+    suspend fun getRegistrationByDeviceId(deviceId: String): UserRegistrationEntity?
+
+    @Query("SELECT * FROM user_registrations WHERE id = :id")
+    suspend fun getRegistrationById(id: Long): UserRegistrationEntity?
 }

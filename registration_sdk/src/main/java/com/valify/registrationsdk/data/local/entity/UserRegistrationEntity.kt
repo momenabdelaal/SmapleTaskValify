@@ -15,9 +15,10 @@ data class UserRegistrationEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val username: String,
-    val email: String,
     val phoneNumber: String,
+    val email: String,
     val password: String,
+    val deviceId: String,
     val selfieImagePath: String? = null,
     val registrationCompleted: Boolean = false
 )

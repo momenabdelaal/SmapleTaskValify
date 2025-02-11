@@ -51,10 +51,15 @@ src/
 
 ## Installation
 
-Add to your app's build.gradle:
-```groovy
+1. Add the registration SDK module to your project's `settings.gradle.kts`:
+```kotlin
+include(":app", ":registration_sdk")
+```
+
+2. Add the dependency to your app's `build.gradle.kts`:
+```kotlin
 dependencies {
-    implementation 'com.valify:registration-sdk:1.0.0'
+    implementation(project(":registration_sdk"))
 }
 ```
 
@@ -62,44 +67,113 @@ dependencies {
 ```xml
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-feature android:name="android.hardware.camera.front" />
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+<uses-feature android:name="android.hardware.camera" />
+<uses-feature android:name="android.hardware.camera.autofocus" />
 ```
 
-## Basic Usage
+## Integration Guide
 
-1. Initialize SDK:
-```kotlin
-ValifySDK.initialize(context)
-```
+### 1. Initialize SDK in Application Class
 
-2. Start Registration:
+#### Option 1: Using SDK Theme
 ```kotlin
-ValifyRegistration.startRegistration(
-    onSuccess = { userId -> 
-        // Handle success
-    },
-    onError = { error ->
-        // Handle error
+@HiltAndroidApp
+class ValifyApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        
+        ValifyRegistrationSDK.initialize(
+            ValifyRegistrationConfig(
+                context = applicationContext,
+                onRegistrationComplete = { userId ->
+                    // Handle successful registration
+                },
+                onRegistrationError = { error ->
+                    // Handle registration error
+                },
+                enableAutoNavigation = true,
+                theme = ValifyTheme(
+                    primaryColor = Color.parseColor("#263AC2"),
+                    secondaryColor = Color.parseColor("#FF03DAC5"),
+                    backgroundColor = Color.WHITE,
+                    textColor = Color.BLACK
+                )
+            )
+        )
     }
-)
+}
 ```
 
-## Validation Rules
-- Username: Required
-- Email: Valid email format
-- Phone: Valid phone number format
-- Password: Minimum requirements enforced
+#### Option 2: Using App Theme
+```kotlin
+@HiltAndroidApp
+class ValifyApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        
+        ValifyRegistrationSDK.initialize(
+            ValifyRegistrationConfig(
+                context = applicationContext,
+                onRegistrationComplete = { userId ->
+                    // Handle successful registration
+                },
+                onRegistrationError = { error ->
+                    // Handle registration error
+                },
+                enableAutoNavigation = true
+                // No theme configuration - will use app's theme
+            )
+        )
+    }
+}
+```
 
-## Camera Features
-- Front camera activation
-- Real-time smile detection
-- Automatic image capture
-- Image storage in local database
+### 2. Implement in MainActivity
+```kotlin
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            ValifyTheme { // Use your app's theme here
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    val navController = rememberNavController()
+                    // Let the SDK handle navigation
+                    ValifyRegistrationSDK.getConfig().navigator.RegistrationNavigation(navController)
+                }
+            }
+        }
+    }
+}
+```
 
-## Responsive Design
-- Supports different screen sizes
-- Adapts to device orientations
-- Handles runtime permissions
+## Navigation Flow
+1. Registration Screen: User enters registration details
+2. Selfie Screen: User captures selfie
+3. Completion: SDK triggers onRegistrationComplete callback
 
-## Support
-For issues and questions:
-bibomomen@gmail.com
+## Customization
+- Use your app's theme by omitting the theme configuration in SDK initialization
+- Navigation can be controlled with enableAutoNavigation flag
+- Success and error callbacks can be customized in SDK initialization
+
+## Error Handling
+The SDK provides error callbacks for:
+- Registration validation errors
+- Camera and permission errors
+- Network connectivity issues
+- Database operation errors
+
+## Best Practices
+1. Initialize SDK in Application class
+2. Use Hilt for dependency injection
+3. Handle all error cases in callbacks
+4. Follow Material Design guidelines for UI consistency
+5. Implement proper permission handling

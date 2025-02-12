@@ -44,10 +44,73 @@ src/
 ```
 
 ## Error Handling
-- Input validation errors
-- Camera permission errors
-- Database operation errors
-- Image capture errors
+
+### Registration Errors
+1. **Input Validation Errors**
+   - Username: Must be at least 3 characters
+   - Email: Must be in valid email format
+   - Phone: Must be 10-13 digits with optional + prefix
+   - Password: Must be 8+ characters with uppercase, lowercase, and number
+
+2. **Database Errors**
+   - Storage capacity errors
+   - Database access errors
+   - Data corruption errors
+
+3. **Camera Errors**
+   - Permission denied
+   - Camera unavailable
+   - Camera initialization failed
+   - Low memory during capture
+
+4. **Storage Errors**
+   - Permission denied
+   - Insufficient storage space
+   - File access errors
+   - File corruption
+
+### Error Recovery Strategies
+1. **Input Validation**
+   ```kotlin
+   when (val result = validationService.validateEmail(email)) {
+       is ValidationResult.Error -> showError(result.message)
+       is ValidationResult.Success -> proceedWithRegistration()
+   }
+   ```
+
+2. **Camera Handling**
+   ```kotlin
+   try {
+       cameraProvider.bindToLifecycle(
+           lifecycleOwner,
+           cameraSelector,
+           preview,
+           imageAnalyzer
+       )
+   } catch (e: Exception) {
+       when (e) {
+           is CameraUnavailableException -> showError("Camera unavailable")
+           is SecurityException -> requestCameraPermission()
+           else -> showError("Camera error: ${e.message}")
+       }
+   }
+   ```
+
+### Error Prevention
+1. **Permission Checks**
+   - Runtime permission requests
+   - Graceful fallbacks
+   - Clear user instructions
+
+2. **Data Validation**
+   - Input sanitization
+   - Format verification
+   - Size limitations
+
+3. **Resource Management**
+   - Memory monitoring
+   - Storage space verification
+   - Camera state tracking
 
 ## Installation
 
@@ -95,13 +158,7 @@ class ValifyApp : Application() {
                 onRegistrationError = { error ->
                     // Handle registration error
                 },
-                enableAutoNavigation = true,
-                theme = ValifyTheme(
-                    primaryColor = Color.parseColor("#263AC2"),
-                    secondaryColor = Color.parseColor("#FF03DAC5"),
-                    backgroundColor = Color.WHITE,
-                    textColor = Color.BLACK
-                )
+                enableAutoNavigation = true
             )
         )
     }
@@ -163,13 +220,6 @@ class MainActivity : ComponentActivity() {
 - Use your app's theme by omitting the theme configuration in SDK initialization
 - Navigation can be controlled with enableAutoNavigation flag
 - Success and error callbacks can be customized in SDK initialization
-
-## Error Handling
-The SDK provides error callbacks for:
-- Registration validation errors
-- Camera and permission errors
-- Network connectivity issues
-- Database operation errors
 
 ## Best Practices
 1. Initialize SDK in Application class

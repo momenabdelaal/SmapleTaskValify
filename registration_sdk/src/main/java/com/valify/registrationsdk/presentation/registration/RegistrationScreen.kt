@@ -8,10 +8,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.valify.registrationsdk.R
 import com.valify.registrationsdk.presentation.components.ValifyProgressIndicator
 import com.valify.registrationsdk.presentation.components.ValifyTextField
 import com.valify.registrationsdk.presentation.theme.LocalValifyTheme
@@ -54,7 +56,7 @@ fun RegistrationScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Register",
+                            text = stringResource(R.string.register),
                             style = MaterialTheme.typography.h6,
                             color = theme.colors.onPrimary
                         )
@@ -87,14 +89,14 @@ fun RegistrationScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         Button(onClick = { showSelfiePreview = false }) {
-                            Text("Back")
+                            Text(stringResource(R.string.back))
                         }
                         Button(
                             onClick = { 
                                 state.registrationId?.let { onRegistrationComplete(it) }
                             }
                         ) {
-                            Text("Retake Photo")
+                            Text(stringResource(R.string.retake_photo))
                         }
                     }
                 }
@@ -117,7 +119,7 @@ fun RegistrationScreen(
                     ValifyTextField(
                         value = state.email,
                         onValueChange = { viewModel.onEvent(RegistrationEvent.EmailChanged(it)) },
-                        label = "Email",
+                        label = stringResource(R.string.email),
                         keyboardType = KeyboardType.Email,
                         error = state.emailError,
                         isEnabled = !state.isLoading
@@ -127,7 +129,7 @@ fun RegistrationScreen(
                         maxLength = 11,
                         value = state.phoneNumber,
                         onValueChange = { viewModel.onEvent(RegistrationEvent.PhoneNumberChanged(it)) },
-                        label = "Phone Number",
+                        label = stringResource(R.string.phone_number),
                         keyboardType = KeyboardType.Phone,
                         error = state.phoneNumberError,
                         isEnabled = !state.isLoading
@@ -136,7 +138,7 @@ fun RegistrationScreen(
                     ValifyTextField(
                         value = state.password,
                         onValueChange = { viewModel.onEvent(RegistrationEvent.PasswordChanged(it)) },
-                        label = "Password",
+                        label = stringResource(R.string.password),
                         keyboardType = KeyboardType.Password,
                         error = state.passwordError,
                         isPassword = true,
@@ -159,12 +161,12 @@ fun RegistrationScreen(
                             .fillMaxWidth()
                             .padding(vertical = 16.dp)
                     ) {
-                        Text(text = if (state.isLoading) "Registering..." else "Register")
+                        Text(text = if (state.isLoading) stringResource(R.string.registering) else stringResource(R.string.register))
                     }
 
                     if (state.isRegistered) {
                         Text(
-                            text = "Already Registered",
+                            text = stringResource(R.string.already_registered),
                             color = Color(0xFF263AC2),
                             modifier = Modifier
                                 .clickable {
@@ -181,7 +183,7 @@ fun RegistrationScreen(
             }
 
             ValifyProgressIndicator(
-                message = "Processing registration...",
+                message = stringResource(R.string.processing_registration),
                 isVisible = state.isLoading
             )
 
@@ -192,7 +194,7 @@ fun RegistrationScreen(
                     text = { Text(showError!!) },
                     confirmButton = {
                         TextButton(onClick = { showError = null }) {
-                            Text("OK")
+                            Text(stringResource(R.string.ok))
                         }
                     },
                     backgroundColor = MaterialTheme.colors.surface,

@@ -59,12 +59,7 @@ class RegistrationNavigator(
         }
     }
 
-    private fun Context.getRegistrationRepository(): RegistrationRepository {
-        return (this.applicationContext as RegistrationRepositoryProvider)
-            .provideRegistrationRepository()
-    }
+
 }
 
-interface RegistrationRepositoryProvider {
-    fun provideRegistrationRepository(): RegistrationRepository
-}
+

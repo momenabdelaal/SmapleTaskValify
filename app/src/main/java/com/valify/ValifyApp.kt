@@ -5,14 +5,12 @@ import android.graphics.Color
 import android.widget.Toast
 import com.valify.registration.ValifyRegistrationSDK
 import com.valify.registration.config.ValifyRegistrationConfig
-import com.valify.registration.config.ValifyTheme
-import com.valify.registration.navigation.RegistrationRepositoryProvider
 import com.valify.registrationsdk.domain.repository.RegistrationRepository
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @HiltAndroidApp
-class ValifyApp : Application(), RegistrationRepositoryProvider {
+class ValifyApp : Application() {
 
     @Inject
     lateinit var registrationRepository: RegistrationRepository
@@ -42,7 +40,5 @@ class ValifyApp : Application(), RegistrationRepositoryProvider {
         )
     }
 
-    override fun provideRegistrationRepository(): RegistrationRepository {
-        return registrationRepository
-    }
+
 }

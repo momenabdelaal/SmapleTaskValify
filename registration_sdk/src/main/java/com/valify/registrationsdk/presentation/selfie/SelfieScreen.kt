@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -40,6 +41,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.valify.registrationsdk.R
 import com.valify.registrationsdk.util.ImageUtils
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
@@ -70,12 +72,11 @@ fun SelfieScreen(
     
     val cameraPermissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
 
-    // Initialize face detector with optimal settings
     val faceDetector = remember {
         val options = FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
-            .setMinFaceSize(0.2f) // Adjust based on your needs
+            .setMinFaceSize(0.2f)
             .build()
         FaceDetection.getClient(options)
     }
@@ -203,18 +204,20 @@ fun SelfieScreen(
                                     )
 
                                 ) {
-                                    Text("Save and Continue")
+                                    Text(stringResource(R.string.save_and_continue))
                                 }
 
                                 Button(
                                     onClick = { viewModel.onEvent(SelfieEvent.OnRetakePhoto) },
-                                    modifier = Modifier.fillMaxWidth(0.8f).height(50.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.8f)
+                                        .height(50.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         backgroundColor =  Color(0xFFB0BEC5) ,
                                         contentColor = Color.White,
                                     )
                                 ) {
-                                    Text("Retake Photo")
+                                    Text(stringResource(R.string.retake_photo))
                                 }
                             }
                         }
@@ -271,13 +274,13 @@ fun SelfieScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Smile for the camera!",
+                                text = stringResource(R.string.smile_for_the_camera),
                                 style = MaterialTheme.typography.h6,
                                 textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Position your face in the center and smile naturally",
+                                text = stringResource(R.string.position_your_face_in_the_center_and_smile_naturally),
                                 style = MaterialTheme.typography.body2,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
@@ -302,13 +305,13 @@ private fun PermissionRequest(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "Camera permission is required to take a selfie",
+            stringResource(R.string.camera_permission_is_required_to_take_a_selfie),
             style = MaterialTheme.typography.h6,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 16.dp)
         )
         Text(
-            "We need camera access to capture your selfie for registration",
+            stringResource(R.string.we_need_camera_access_to_capture_your_selfie_for_registration),
             style = MaterialTheme.typography.body2,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
@@ -316,9 +319,16 @@ private fun PermissionRequest(
         )
         Button(
             onClick = onRequestPermission,
-            modifier = Modifier.fillMaxWidth(0.8f)
+            modifier = Modifier.fillMaxWidth(0.8f),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = Color(0xFF263AC2),
+                contentColor = Color.White,
+                disabledBackgroundColor = Color(0xFFB0BEC5),
+                disabledContentColor = Color.White
+            ),
+
         ) {
-            Text("Grant Camera Permission")
+            Text(stringResource(R.string.grant_camera_permission))
         }
     }
 }

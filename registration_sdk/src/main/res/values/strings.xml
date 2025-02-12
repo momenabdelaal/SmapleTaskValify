@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="register">Register</string>
+    <string name="back">Back</string>
+    <string name="retake_photo">Retake Photo</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="already_registered">Already Registered</string>
+    <string name="registering">Registering...</string>
+    <string name="processing_registration">Processing registration...</string>
+    <string name="ok">OK</string>
+    <string name="camera_permission_is_required_to_take_a_selfie">Camera permission is required to take a selfie</string>
+    <string name="we_need_camera_access_to_capture_your_selfie_for_registration">We need camera access to capture your selfie for registration</string>
+    <string name="grant_camera_permission">Grant Camera Permission</string>
+    <string name="position_your_face_in_the_center_and_smile_naturally">Position your face in the center and smile naturally</string>
+    <string name="smile_for_the_camera">Smile for the camera!</string>
+    <string name="save_and_continue">Save and Continue</string>
+</resources>
